@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Lectionary PDF sources, Excel column mapping, and delete/import/export commands for the liturgical calendar.">
+  <title>Lectionary PDF → Excel &amp; Strapi Import</title>
+  <style>
+    :root { --bg: #0f1419; --surface: #1a2332; --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --border: #30363d; --green: #3fb950; --warn: #d29922; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; margin: 0; padding: 2rem; }
+    .doc { max-width: 52rem; margin: 0 auto; }
+    h1 { font-size: 2.5em; border-bottom: 3px solid #0066cc; padding-bottom: 0.5rem; margin-top: 0; color: var(--text); }
+    h2 { font-size: 1.8em; border-left: 4px solid #0066cc; padding-left: 15px; margin-top: 2rem; color: var(--accent); }
+    h3 { font-size: 1.4em; margin-top: 1.25rem; color: #333; color: var(--text); }
+    h4 { font-size: 1.2em; margin-top: 1rem; color: var(--text); }
+    p { margin: 0.5rem 0 1rem; color: var(--muted); }
+    code, .code-highlight { background-color: #e8f4f8; color: #0d3b66; padding: 2px 6px; border-radius: 3px; border: 1px solid #b8d4e3; font-family: 'Courier New', monospace; font-size: 0.9em; }
+    pre, .code-block { background-color: #e8f4f8; color: #0d3b66; padding: 15px; border-radius: 5px; border: 1px solid #b8d4e3; overflow-x: auto; margin: 15px 0; }
+    pre code { background: none; padding: 0; color: #0d3b66; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+    th { background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: white; font-weight: bold; text-transform: uppercase; font-size: 0.9em; }
+    tr:nth-child(even) { background-color: #f8f9fa; }
+    tr:hover { background-color: #e3f2fd; }
+    td code { background-color: #e8f4f8; color: #0d3b66; padding: 3px 8px; border-radius: 3px; border: 1px solid #b8d4e3; }
+    .script-name { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 10px; border-radius: 5px; font-family: 'Courier New', monospace; font-weight: bold; display: inline-block; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3); }
+    .section-container { background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%); border-left: 4px solid #0066cc; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1); }
+    .section-container.parameters { background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%); border-left-color: #ff9800; }
+    .section-container.output { background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%); border-left-color: #28a745; }
+    .section-container.usage { background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%); border-left-color: #9c27b0; }
+    .section-header { color: #333; padding: 12px 20px; margin: -20px -20px 20px -20px; border-radius: 8px 8px 0 0; font-size: 1.2em; font-weight: bold; }
+    .section-header.parameters { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; }
+    .section-header.output { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; }
+    .section-header.usage { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); color: white; }
+    .section-intro { background: linear-gradient(135deg, #e8f4f8 0%, #d1e7f0 100%); border-left: 4px solid #0066cc; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .section-intro p { color: #333; }
+    .section-intro code { background-color: #e8f4f8; color: #0d3b66; border: 1px solid #b8d4e3; }
+    .parameters-list { background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%); border-left: 4px solid #ff9800; border-radius: 8px; padding: 15px 20px; margin: 15px 0; }
+    .parameters-list code { background-color: #e8f4f8; color: #0d3b66; padding: 3px 8px; border-radius: 3px; border: 1px solid #b8d4e3; }
+    .info { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 12px 16px; margin: 1rem 0; border-radius: 0 6px 6px 0; }
+    .info code { background-color: #e8f4f8; color: #0d3b66; border: 1px solid #b8d4e3; }
+    .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 1rem 0; border-radius: 0 6px 6px 0; }
+    .warning code { background-color: #e8f4f8; color: #0d3b66; border: 1px solid #b8d4e3; }
+    .command-block { border-radius: 8px; border: 2px solid #2196f3; padding: 0; margin: 1rem 0; overflow: hidden; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); }
+    .command-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: rgba(0,0,0,0.05); }
+    .command-type { font-weight: bold; color: #0d3b66; }
+    .command-header-buttons { display: flex; gap: 8px; }
+    .copy-button { background: #0066cc; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: bold; }
+    .copy-button-template { background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: bold; }
+    .command-parameters { padding: 15px; background: rgba(255,255,255,0.5); border-bottom: 1px solid rgba(0,0,0,0.1); }
+    .command-parameters h5 { margin: 0 0 12px 0; font-size: 0.9em; color: #333; }
+    .parameter-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .parameter-group.single { grid-template-columns: 1fr; }
+    .parameter-input label { font-size: 0.8em; color: #555; font-weight: 600; }
+    .parameter-input input { padding: 8px 12px; border: 2px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; }
+    .command-content { padding: 12px 15px; font-family: 'Courier New', monospace; font-size: 0.9em; word-break: break-all; color: #0d3b66; }
+    .command-single-line { padding: 12px 15px; background: #e8f4f8; border-top: 1px solid #b8d4e3; }
+    .command-single-line-label { font-size: 0.8em; color: #666; margin-bottom: 4px; }
+    .command-single-line code { background: #e8f4f8; color: #0d3b66; padding: 4px 8px; border: 1px solid #b8d4e3; }
+    .toc { margin: 1.5rem 0; padding: 1rem; background: var(--surface); border-radius: 8px; }
+    .toc ul { list-style: none; padding-left: 0; }
+    .toc li { margin: 0.35rem 0; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    ul, ol { margin: 0.5rem 0 1rem; padding-left: 1.5rem; color: var(--muted); }
+    li { margin: 0.25rem 0; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="doc">
+    <h1>Lectionary PDF → Excel &amp; Strapi Import</h1>
+    <p>This document describes the <strong>input PDFs</strong> for the liturgical calendar, how their content maps to <strong>Excel columns</strong> and Strapi fields, and the scripts used to <strong>delete</strong>, <strong>import</strong>, and <strong>export</strong> liturgy-day data. The PDF-based import replaces the earlier seed script for bulk data.</p>
+
+    <nav class="toc" aria-label="Contents">
+      <h2 id="toc">Contents</h2>
+      <ul>
+        <li><a href="#input-pdfs">1. Input PDFs (which is which)</a></li>
+        <li><a href="#column-mapping">2. PDF → Excel / Strapi column mapping</a></li>
+        <li><a href="#delete">3. Delete liturgy days (purge)</a></li>
+        <li><a href="#import">4. Import from PDF into Strapi</a></li>
+        <li><a href="#export-excel">5. Export parsed PDF to Excel</a></li>
+        <li><a href="#run-order">6. Run order</a></li>
+        <li><a href="#scripts">7. Scripts and pipeline</a></li>
+        <li><a href="#related">8. Related documentation</a></li>
+      </ul>
+    </nav>
+
+    <h2 id="input-pdfs">1. Input PDFs (which is which)</h2>
+    <div class="section-container">
+      <div class="section-header">📄 Source files</div>
+      <p>Two PDFs in <code class="code-highlight">documentation/lectionary_calendar/</code> are the input data. The parser and import scripts use them as follows.</p>
+      <table>
+        <thead>
+          <tr><th>File</th><th>Language</th><th>Use</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>2026-Liturgical-Calender.pdf</code></td>
+            <td>English</td>
+            <td>Day headings (e.g. &ldquo;New Year. Circumcision of our Lord…&rdquo;), season codes <code>(Niram N)</code>. One entry per calendar day in format <code>N. Description</code>.</td>
+          </tr>
+          <tr>
+            <td><code>Panjangom_26.pdf</code></td>
+            <td>Malayalam</td>
+            <td>Same structure: day number + description. Season codes appear as <code>(\ndw N)</code>. Merged with English by date.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Entries are merged by date (YYYY-MM-DD). Month is inferred from the order of days (day 1 starts a new month). If a date exists only in one PDF, that row keeps the other language fields empty until filled by carry-over or backfill where applicable.</p>
+    </div>
+
+    <h2 id="column-mapping">2. PDF → Excel / Strapi column mapping</h2>
+    <div class="section-container parameters">
+      <div class="section-header parameters">⚙️ Column mapping</div>
+      <p>Each parsed liturgy day becomes <strong>one row</strong> in Excel and one Strapi document. English and Malayalam columns are on the same row (not repeated rows per language).</p>
+      <table>
+        <thead>
+          <tr><th>Excel / Strapi field</th><th>Source</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>date</code></td><td>Parsed from both PDFs</td><td>YYYY-MM-DD; inferred from day number and month order.</td></tr>
+          <tr><td><code>dayHeadingEn</code></td><td>English PDF</td><td>Text after <code>N.</code> for that date (continuation lines merged).</td></tr>
+          <tr><td><code>dayHeadingMalylm</code></td><td>Malayalam PDF</td><td>Text after day number for same date (merged by date).</td></tr>
+          <tr><td><code>seasonNameEn</code></td><td>Extracted from EN heading</td><td><code>(Niram N)</code> → &ldquo;Niram N&rdquo;; else carry-over from previous day or backfill.</td></tr>
+          <tr><td><code>seasonNameMalylm</code></td><td>Extracted from ML heading</td><td><code>(\ndw N)</code> → &ldquo;Niram N&rdquo;; else carry-over / backfill.</td></tr>
+          <tr><td><code>order</code></td><td>Import script</td><td>0-based index of the day in the created set.</td></tr>
+          <tr><td><code>readings</code></td><td>—</td><td>PDFs do not list readings; array is empty. Excel columns <code>reading1_*</code>, <code>reading2_*</code> are for manual or future data (e.g. <code>liturgyHeadingEn</code>, <code>liturgyHeadingMalylm</code>, <code>contentPlaceEn</code>, <code>contentPlaceMalylm</code>).</td></tr>
+        </tbody>
+      </table>
+      <p>Excel template columns for readings (when populated from another source): <code>reading1_liturgyHeadingEn</code>, <code>reading1_liturgyHeadingMalylm</code>, <code>reading1_contentPlaceEn</code>, <code>reading1_contentPlaceMalylm</code>, and similarly <code>reading2_*</code>. These are not filled by the PDF parser.</p>
+    </div>
+
+    <h2 id="delete">3. Delete liturgy days (purge)</h2>
+    <div class="section-container usage">
+      <div class="section-header usage">📋 Delete script</div>
+      <p>Use <code class="script-name">delete-liturgy-days.js</code> to remove liturgy-day entries before re-importing. With <strong>no</strong> tenant ID, it deletes <strong>all</strong> liturgy days (all tenants). With <code>--tenant-id=...</code>, it deletes only that tenant&rsquo;s entries.</p>
+      <div class="command-block" data-command-base="node scripts/delete-liturgy-days.js" data-template-command="node scripts/delete-liturgy-days.js --tenant-id=tenant_demo_002">
+        <div class="command-header">
+          <span class="command-type">Purge liturgy days</span>
+          <div class="command-header-buttons">
+            <button class="copy-button-template" onclick="copyTemplateCommand(this, 'cmd-delete')" title="Copy template command">📄 Template</button>
+            <button class="copy-button" onclick="copyCommand(this, 'cmd-delete')" title="Copy customized command">📋 Copy</button>
+          </div>
+        </div>
+        <div class="command-parameters">
+          <h5>🔧 Customize parameters</h5>
+          <div class="parameter-group">
+            <div class="parameter-input">
+              <label for="cmd-delete-tenant">Tenant ID (empty = delete all):</label>
+              <input type="text" id="cmd-delete-tenant" value="tenant_demo_002" placeholder="leave empty for all" oninput="updateCommand('cmd-delete', 'tenant', this.value)">
+            </div>
+            <div class="parameter-input">
+              <label for="cmd-delete-dry">DRY_RUN (1 = no delete):</label>
+              <input type="text" id="cmd-delete-dry" placeholder="1 or empty" oninput="updateCommand('cmd-delete', 'dry', this.value)">
+            </div>
+          </div>
+        </div>
+        <div class="command-content" id="cmd-delete">node scripts/delete-liturgy-days.js --tenant-id=tenant_demo_002</div>
+        <div class="command-single-line">
+          <div class="command-single-line-label">Windows single-line:</div>
+          <code id="cmd-delete-single-code">node scripts/delete-liturgy-days.js --tenant-id=tenant_demo_002</code>
+        </div>
+      </div>
+      <div class="warning"><strong>Note:</strong> Omit <code>--tenant-id</code> to delete all liturgy days across tenants. Use <code>DRY_RUN=1</code> to only log the count without deleting.</div>
+    </div>
+
+    <h2 id="import">4. Import from PDF into Strapi</h2>
+    <div class="section-container usage">
+      <div class="section-header usage">📋 Import script</div>
+      <p>Use <code class="script-name">import-liturgy-days-from-pdf.js</code> to parse the two PDFs and create liturgy-day documents in Strapi for a tenant.</p>
+      <div class="command-block" data-command-base="node scripts/import-liturgy-days-from-pdf.js" data-template-command="node scripts/import-liturgy-days-from-pdf.js --tenant-id=tenant_demo_002 --year=2026 --limit=10">
+        <div class="command-header">
+          <span class="command-type">Import from PDF</span>
+          <div class="command-header-buttons">
+            <button class="copy-button-template" onclick="copyTemplateCommand(this, 'cmd-import')" title="Copy template">📄 Template</button>
+            <button class="copy-button" onclick="copyCommand(this, 'cmd-import')" title="Copy command">📋 Copy</button>
+          </div>
+        </div>
+        <div class="command-parameters">
+          <h5>🔧 Customize parameters</h5>
+          <div class="parameter-group">
+            <div class="parameter-input">
+              <label for="cmd-import-tenant">Tenant ID:</label>
+              <input type="text" id="cmd-import-tenant" value="tenant_demo_002" oninput="updateCommand('cmd-import', 'tenant', this.value)">
+            </div>
+            <div class="parameter-input">
+              <label for="cmd-import-year">Year:</label>
+              <input type="text" id="cmd-import-year" value="2026" oninput="updateCommand('cmd-import', 'year', this.value)">
+            </div>
+          </div>
+          <div class="parameter-group">
+            <div class="parameter-input">
+              <label for="cmd-import-limit">Limit (optional, e.g. 10):</label>
+              <input type="text" id="cmd-import-limit" placeholder="empty = all" oninput="updateCommand('cmd-import', 'limit', this.value)">
+            </div>
+            <div class="parameter-input"></div>
+          </div>
+        </div>
+        <div class="command-content" id="cmd-import">node scripts/import-liturgy-days-from-pdf.js --tenant-id=tenant_demo_002 --year=2026 --limit=10</div>
+        <div class="command-single-line">
+          <div class="command-single-line-label">Windows single-line:</div>
+          <code id="cmd-import-single-code">node scripts/import-liturgy-days-from-pdf.js --tenant-id=tenant_demo_002 --year=2026 --limit=10</code>
+        </div>
+      </div>
+      <div class="parameters-list">
+        <p><strong>Options:</strong></p>
+        <ul>
+          <li><code>--tenant-id=...</code> — Tenant to attach entries to (default: <code>tenant_demo_002</code>).</li>
+          <li><code>--year=YYYY</code> — Calendar year for parsed dates (default: <code>2026</code>).</li>
+          <li><code>--limit=N</code> — Create at most N entries (for testing).</li>
+          <li><code>DRY_RUN=1</code> — Parse and log only; do not create.</li>
+          <li><code>--dump-text</code> — Write raw PDF text to <code>dumped-en.txt</code> / <code>dumped-ml.txt</code>.</li>
+          <li><code>--en-pdf=path</code> / <code>--ml-pdf=path</code> — Override PDF paths.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 id="export-excel">5. Export parsed PDF to Excel</h2>
+    <div class="section-container output">
+      <div class="section-header output">📊 Export to Excel</div>
+      <p>To get the same parsed data into an Excel sheet (e.g. for review or editing), use <code class="script-name">export-liturgy-days-from-pdf-to-excel.js</code>. It runs the same parser as the import script and writes all merged days to <code>documentation/lectionary_calendar/liturgy-days-from-pdf.xlsx</code> with columns aligned to the mapping above.</p>
+      <div class="command-block" data-command-base="node scripts/export-liturgy-days-from-pdf-to-excel.js" data-template-command="node scripts/export-liturgy-days-from-pdf-to-excel.js --year=2026">
+        <div class="command-header">
+          <span class="command-type">Export PDF → Excel</span>
+          <div class="command-header-buttons">
+            <button class="copy-button-template" onclick="copyTemplateCommand(this, 'cmd-export')" title="Copy template">📄 Template</button>
+            <button class="copy-button" onclick="copyCommand(this, 'cmd-export')" title="Copy command">📋 Copy</button>
+          </div>
+        </div>
+        <div class="command-parameters">
+          <h5>🔧 Customize parameters</h5>
+          <div class="parameter-group single">
+            <div class="parameter-input">
+              <label for="cmd-export-year">Year:</label>
+              <input type="text" id="cmd-export-year" value="2026" oninput="updateCommand('cmd-export', 'year', this.value)">
+            </div>
+          </div>
+        </div>
+        <div class="command-content" id="cmd-export">node scripts/export-liturgy-days-from-pdf-to-excel.js --year=2026</div>
+        <div class="command-single-line">
+          <div class="command-single-line-label">Windows single-line:</div>
+          <code id="cmd-export-single-code">node scripts/export-liturgy-days-from-pdf-to-excel.js --year=2026</code>
+        </div>
+      </div>
+      <p>Output file: <code class="code-highlight">documentation/lectionary_calendar/liturgy-days-from-pdf.xlsx</code>. Reading columns are present but empty (PDFs do not contain per-day readings).</p>
+    </div>
+
+    <h2 id="run-order">6. Run order</h2>
+    <ol>
+      <li>Stop the Strapi server if it is running.</li>
+      <li><strong>Delete</strong> liturgy days for the target tenant (or all) so re-import does not duplicate.</li>
+      <li><strong>Import</strong> from PDF (optionally with <code>--limit=10</code> or <code>DRY_RUN=1</code> first).</li>
+      <li>Optionally run <strong>Export to Excel</strong> to inspect or edit the parsed data in a spreadsheet.</li>
+      <li>Start Strapi and verify in Content Manager → Liturgical Calendar – Day.</li>
+    </ol>
+
+    <h2 id="scripts">7. Scripts and pipeline</h2>
+    <div class="section-container">
+      <div class="section-header">🔗 Implementation</div>
+      <table>
+        <thead>
+          <tr><th>Script</th><th>Role</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code class="script-name">lectionary/pdf-extract.js</code></td><td>Uses <code>pdf-parse</code> to extract raw text from a PDF; used by <code>--dump-text</code> and by the parser.</td></tr>
+          <tr><td><code class="script-name">lectionary-pdf-parser.js</code></td><td>Parses EN/ML PDF text into day entries (date, headings, season), merges by date, extracts (Niram N) / (\ndw N), carry-over and backfill for season.</td></tr>
+          <tr><td><code class="script-name">import-liturgy-days-from-pdf.js</code></td><td>Loads Strapi, calls parser, creates liturgy-day documents; supports <code>--dump-text</code>, <code>--limit</code>, <code>DRY_RUN</code>.</td></tr>
+          <tr><td><code class="script-name">delete-liturgy-days.js</code></td><td>Deletes liturgy-day entries (all tenants or one tenant).</td></tr>
+          <tr><td><code class="script-name">export-liturgy-days-from-pdf-to-excel.js</code></td><td>Runs parser and writes rows to <code>liturgy-days-from-pdf.xlsx</code>.</td></tr>
+        </tbody>
+      </table>
+      <p>The PDF-based flow <strong>replaces</strong> the manual seed script (<code class="script-name">seed-liturgy-days.js</code>) for bulk data. For a small fixed set of days, the seed script is still available; for full calendar data, use delete + import from PDF.</p>
+    </div>
+
+    <h2 id="related">8. Related documentation</h2>
+    <ul>
+      <li><a href="lectionary-bulk-import-guide.html">Lectionary Bulk Import from PDFs</a> – delete and import commands, options, troubleshooting.</li>
+      <li><a href="liturgy-calendar-seed-script.html">Liturgy Calendar Seed Script</a> – small manual seed (7 days) without PDFs.</li>
+      <li><a href="liturgical-calendar-strapi-server.html">Liturgical Calendar – Strapi Server Specification</a> – content model and schema.</li>
+      <li><a href="liturgy-calendar-api-reference.html">Liturgy Day API Reference</a> – frontend integration and API usage.</li>
+    </ul>
+
+    <hr style="border: 0; border-top: 1px solid var(--border); margin: 2rem 0;">
+    <p style="font-size: 0.875rem; color: var(--muted);">Lectionary PDF → Excel &amp; Strapi Import. Part of <code>documentation/lectionary_calendar/</code>.</p>
+  </div>
+
+  <script>
+    const commandParams = {};
+    function updateCommand(commandId, paramName, paramValue) {
+      if (!commandParams[commandId]) commandParams[commandId] = {};
+      commandParams[commandId][paramName] = paramValue;
+      const el = document.getElementById(commandId);
+      const block = el && el.closest('.command-block');
+      if (!block || !el) return;
+      const base = block.getAttribute('data-command-base');
+      let cmd = base;
+      const p = commandParams[commandId] || {};
+      if (commandId === 'cmd-delete') {
+        if (p.tenant && p.tenant.trim()) cmd += ' --tenant-id=' + p.tenant.trim();
+      } else if (commandId === 'cmd-import') {
+        if (p.tenant) cmd += ' --tenant-id=' + p.tenant;
+        if (p.year) cmd += ' --year=' + p.year;
+        if (p.limit && p.limit.trim()) cmd += ' --limit=' + p.limit.trim();
+      } else if (commandId === 'cmd-export') {
+        if (p.year) cmd += ' --year=' + p.year;
+      }
+      el.textContent = cmd;
+      const single = document.getElementById(commandId + '-single-code');
+      if (single) single.textContent = cmd;
+    }
+    function copyCommand(button, commandId) {
+      const el = document.getElementById(commandId);
+      if (!el) return;
+      const text = el.textContent.trim();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          button.classList.add('copied');
+          button.textContent = '✓ Copied!';
+          setTimeout(function() { button.classList.remove('copied'); button.textContent = '📋 Copy'; }, 2000);
+        });
+      }
+    }
+    function copyTemplateCommand(button, commandId) {
+      const block = document.getElementById(commandId).closest('.command-block');
+      let text = block ? block.getAttribute('data-template-command') : '';
+      if (text) text = text.replace(/&quot;/g, '"');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          button.textContent = '✓ Copied!';
+          setTimeout(function() { button.textContent = '📄 Template'; }, 2000);
+        });
+      }
+    }
+    document.querySelectorAll('.command-block[data-command-base]').forEach(function(block) {
+      const content = block.querySelector('.command-content');
+      if (!content || !content.id) return;
+      block.querySelectorAll('.parameter-input input').forEach(function(input) {
+        var paramName = input.id && content.id && input.id.indexOf(content.id + '-') === 0 ? input.id.slice(content.id.length + 1) : null;
+        if (paramName && input.value) {
+          if (!commandParams[content.id]) commandParams[content.id] = {};
+          commandParams[content.id][paramName] = input.value;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
