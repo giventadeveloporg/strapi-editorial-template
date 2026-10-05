@@ -376,7 +376,7 @@ module.exports = {
         return;
       }
 
-      const results = { updated: 0, tenantLinked: 0, skipped: 0, errors: [] };
+      const results = { updated: 0, tenantLinked: 0, draftsReset: 0, skipped: 0, errors: [] };
 
       // Resolve tenant numeric ID from documentId
       let tenantNumericId = null;
@@ -429,23 +429,28 @@ module.exports = {
           }
           const tableName = ct.collectionName;
 
-          // Find the published row
-          const publishedRow = await knex(tableName)
+          // Publish creates a fresh row, so the newest stamped row is the published version.
+          const stampedRows = await knex(tableName)
             .where({ document_id: documentId })
             .whereNotNull('published_at')
-            .select('id', 'published_at')
-            .first();
+            .orderBy('id', 'desc')
+            .select('id', 'published_at');
+          const publishedRow = stampedRows[0];
 
           if (!publishedRow) { results.skipped++; continue; }
 
-          // Update publishedAt on both published and draft rows
+          // Strapi 5 draft rows must keep published_at NULL; otherwise Content API
+          // returns the draft as a second published entry.
+          if (stampedRows.length > 1) {
+            await knex(tableName)
+              .whereIn('id', stampedRows.slice(1).map((r) => r.id))
+              .update({ published_at: null });
+            results.draftsReset++;
+          }
+
           if (publishedAt) {
             await knex(tableName)
               .where({ id: publishedRow.id })
-              .update({ published_at: publishedAt });
-            await knex(tableName)
-              .where({ document_id: documentId })
-              .whereNull('published_at')
               .update({ published_at: publishedAt });
             results.updated++;
           }

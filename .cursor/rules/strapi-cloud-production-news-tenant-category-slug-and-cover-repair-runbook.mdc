@@ -43,7 +43,14 @@ alwaysApply: false
   npm run repair:cloud-news-sync -- --tenant-id=mosc_malankara_orthodox_2
   ```
   S3 linker preserves `title`/`slug`/… and maps category by **Cloud slug**; still re-run tenant fix after cover link.
-- **Clean article re-upload (conflicts):** `npm run wipe:cloud-articles-tenant -- --tenant-id=mosc_malankara_orthodox_2` then push articles only + dates + S3.
+- **Clean article re-upload (conflicts / full overwrite from local):** order matters — the S3 cover link **re-publishes** every article (resets `publishedAt` and drops tenant on draft + published rows), so restore dates **last**:
+  1. `npm run wipe:cloud-articles-tenant -- --tenant-id=mosc_malankara_orthodox_2`
+  2. `npm run push:tenant-to-cloud -- --tenant-id=mosc_malankara_orthodox_2 --types=articles --force --delay-ms=80`
+  3. `npm run push:collection-images-s3-to-cloud -- --collection=articles --tenant-id=mosc_malankara_orthodox_2 --skip-api`
+  4. Re-link tenant on the **new** documents only (draft: `PUT /api/articles/:documentId?status=draft` with `{ tenant }` — keeps title/slug/cover/category; published: `fix-published` with `tenantDocumentId`)
+  5. `npm run sync:article-published-dates-cloud -- --tenant-id=mosc_malankara_orthodox_2`
+- **Duplicate published rows:** older `fix-published` builds also stamped `published_at` on the **draft** row, so the Content API returned every article twice once the draft had a tenant. Fixed in [`src/index.js`](mdc:src/index.js): drafts stay `NULL`, extra stamped rows are reset (`results.draftsReset`). Check: tenant-filtered `/api/articles` total must equal unique `documentId` count.
+- ❌ **Do not** run `scripts/repair-production-article-tenant.mjs` on production — it PUTs the target tenant onto **every** article document (all tenants). Use `repair-production-article-tenant-published.mjs` (only drafts already on the tenant) or targeted documentIds.
 - **Local ads/flash scrape:** `npm run seed:ads-flash-catholicatenews -- --tenants=tenant_demo_002,mosc_malankara_orthodox_2`
 - **Durable covers/ads media:** use S3 strategy A — [strapi-cloud-production-durable-s3-image-upload-not-ephemeral-uploads.mdc](mdc:.cursor/rules/strapi-cloud-production-durable-s3-image-upload-not-ephemeral-uploads.mdc) (`--collection=articles` / `advertisement-slots`, `--skip-api`).
 - **S3 register with `prod/` prefix while local media lives under `dev/`** creates Cloud URLs that **403** (object missing under prod). `push-collection-images-s3` now copies remote `dev/` bytes into the prod key before register. Emergency repair:

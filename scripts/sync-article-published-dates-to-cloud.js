@@ -147,7 +147,9 @@ async function main() {
     });
     updated += res?.results?.updated || 0;
     errors += (res?.results?.errors || []).length;
-    console.log(`Batch ${Math.floor(i / BATCH) + 1}: updated=${res?.results?.updated} errors=${(res?.results?.errors || []).length}`);
+    console.log(
+      `Batch ${Math.floor(i / BATCH) + 1}: updated=${res?.results?.updated} draftsReset=${res?.results?.draftsReset ?? 'n/a'} errors=${(res?.results?.errors || []).length}`
+    );
   }
 
   console.log('Done. updated=', updated, 'errors=', errors);
