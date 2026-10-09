@@ -118,6 +118,16 @@ const COLLECTIONS = {
     mediaField: 'image',
     pushContentScript: 'push:tenant-to-cloud',
   },
+  parishes: {
+    label: 'Parishes',
+    uid: 'api::parish.parish',
+    table: 'parishes',
+    tenantLinkTable: 'parishes_tenant_lnk',
+    entryIdCol: 'parish_id',
+    restPlural: 'parishes',
+    mediaField: 'image',
+    pushContentScript: 'push:parishes-to-cloud',
+  },
   'working-committees': {
     label: 'Working Committee',
     uid: 'api::working-committee.working-committee',

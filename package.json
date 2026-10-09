@@ -64,6 +64,8 @@
     "enrich:article-descriptions-catholicatenews": "node ./scripts/enrich-article-descriptions-from-catholicatenews.js",
     "repair:article-tenants-by-slug": "node ./scripts/repair-article-tenants-by-slug.js",
     "seed:parish-images": "node ./scripts/seed-parish-images.js",
+    "import:parishes-directory-mosc-in": "node ./scripts/import-parishes-from-directory-mosc-in.js",
+    "push:parishes-to-cloud": "node ./scripts/push-parishes-to-cloud.js",
     "import:liturgy-days-pdf": "node ./scripts/import-liturgy-days-from-pdf.js",
     "export:liturgy-days-pdf": "node ./scripts/export-liturgy-days-from-pdf-to-excel.js",
     "update:liturgy-days-malayalam": "node ./scripts/update-liturgy-days-malayalam-from-excel.js",

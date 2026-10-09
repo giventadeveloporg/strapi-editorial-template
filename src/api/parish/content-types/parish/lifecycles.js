@@ -29,15 +29,22 @@ async function getTenantForEmail(strapi, email) {
   return { id: id ?? undefined, documentId: documentId ?? undefined };
 }
 
+// Document Service rewrites relation input (e.g. { set: [{ id }] }) before db lifecycles run.
+function hasTenantValue(value) {
+  if (value == null || value === '') return false;
+  if (typeof value !== 'object') return true;
+  if (Array.isArray(value)) return value.length > 0;
+  if (value.id != null || value.documentId != null) return true;
+  const list = value.set ?? value.connect;
+  return Array.isArray(list) ? list.length > 0 : list != null;
+}
+
 module.exports = {
   async beforeCreate(event) {
     applyKebabSlugToEvent(event);
     if (!event.params?.data) return;
     // Preserve tenant when already set (e.g. by sync script or data import)
-    const existing = event.params.data.tenant;
-    if (existing != null && (typeof existing === 'object' ? existing?.connect != null : true)) {
-      return;
-    }
+    if (hasTenantValue(event.params.data.tenant)) return;
     const ctx = requestContext.get();
     const user = ctx?.state?.user || ctx?.state?.admin;
     const email = user?.email;
